@@ -151,7 +151,6 @@
   <section aria-labelledby="t-hora">
     <h2 id="t-hora">Horário</h2>
     <div class="horarios" id="horarios"></div>
-    <label class="outro">Outro horário <input type="time" id="outraHora" step="900"></label>
   </section>
 
   <section aria-labelledby="t-treino">
@@ -251,7 +250,7 @@ function desenhar() {
   const h = $("horarios"); h.innerHTML = "";
   for (const hr of HORARIOS) {
     h.append(botao("hora", hr.replace(":00", "h").replace(":30", "h30"), estado.hora === hr,
-      () => { estado.hora = hr; $("outraHora").value = ""; desenhar(); }));
+      () => { estado.hora = hr; desenhar(); }));
   }
 
   const t = $("treinos"); t.innerHTML = "";
@@ -401,7 +400,6 @@ async function cancelar(item) {
 }
 
 $("agendar").onclick = agendar;
-$("outraHora").onchange = (e) => { estado.hora = e.target.value || null; desenhar(); };
 $("salvarToken").onclick = async () => {
   const v = $("token").value.trim();
   if (!v) return mensagem("Cole a chave antes de salvar.", "erro");
