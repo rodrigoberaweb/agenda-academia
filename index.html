@@ -69,6 +69,7 @@
   .dia span { display: block; font-size: 13px; color: var(--cinza); }
   .dia b { display: block; font-stretch: 62%; font-size: 26px; font-weight: 800; line-height: 1; }
   .dia[aria-pressed="true"] { border-color: var(--pessoa); }
+  .dia:disabled { background: transparent; cursor: default; opacity: .45; }
 
   /* horários: o quadro de horários da academia */
   .horarios { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
@@ -191,7 +192,12 @@ const PESSOAS = [
   { id: "rodrigo", nome: "Rodrigo", cor: "var(--azul)" },
   { id: "aline", nome: "Aline", cor: "var(--amarelo)" },
 ];
-const HORARIOS = ["06:00","07:30","09:00","10:30","12:00","13:30","15:00","16:30","18:00","19:30","21:00"];
+const HORARIOS_SEMANA = ["06:00","07:30","09:00","10:30","12:00","13:30","15:00","16:30","18:00","19:30","21:00"];
+const HORARIOS_SABADO = ["07:00","08:30","10:00","11:30","13:00","14:30"];
+function horariosDoDia(chave) {   // domingo: horário livre, sem agendamento
+  const d = new Date(chave + "T12:00:00Z").getUTCDay();
+  return d === 0 ? [] : d === 6 ? HORARIOS_SABADO : HORARIOS_SEMANA;
+}
 const TREINOS = ["Membros Superiores", "Membros Inferiores"];
 const DIAS = ["dom","seg","ter","qua","qui","sex","sáb"];
 const MESES = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
@@ -247,13 +253,20 @@ function desenhar() {
   for (let i = 0; i < 7; i++) {
     const dia = new Date(hoje.getTime() + i * 864e5);
     const k = chaveDia(dia);
-    if (!estado.dia) estado.dia = chaveDia(new Date(hoje.getTime() + 864e5)); // amanhã
-    d.append(botao("dia", `<span>${i === 0 ? "hoje" : DIAS[dia.getUTCDay()]}</span><b>${dia.getUTCDate()}</b>`,
-      estado.dia === k, () => { estado.dia = k; desenhar(); }));
+    if (!estado.dia) {   // amanhã, ou o próximo dia com aulas
+      let p = new Date(hoje.getTime() + 864e5);
+      while (!horariosDoDia(chaveDia(p)).length) p = new Date(p.getTime() + 864e5);
+      estado.dia = chaveDia(p);
+    }
+    const livre = !horariosDoDia(k).length;
+    const bd = botao("dia", `<span>${i === 0 ? "hoje" : DIAS[dia.getUTCDay()]}</span><b>${dia.getUTCDate()}</b>`,
+      estado.dia === k, () => { estado.dia = k; if (!horariosDoDia(k).includes(estado.hora)) estado.hora = null; desenhar(); });
+    if (livre) { bd.disabled = true; bd.title = "Domingo: horário livre, sem agendamento"; }
+    d.append(bd);
   }
 
   const h = $("horarios"); h.innerHTML = "";
-  for (const hr of HORARIOS) {
+  for (const hr of horariosDoDia(estado.dia)) {
     h.append(botao("hora", hr.replace(":00", "h").replace(":30", "h30"), estado.hora === hr,
       () => { estado.hora = hr; desenhar(); }));
   }
