@@ -168,7 +168,7 @@
     <ul class="lista" id="lista"><li class="vazio">Carregando…</li></ul>
   </section>
 
-  <details id="config">
+  <details id="config" style="margin-bottom:24px">
     <summary>Chave do GitHub</summary>
     <p class="ajuda" style="margin-top:8px">Fica salva só neste navegador. Sem ela a página não consegue ler nem salvar a agenda.</p>
     <input type="password" id="token" placeholder="github_pat_…" autocomplete="off">
@@ -176,13 +176,6 @@
       <button class="sec" id="salvarToken">Salvar chave</button>
       <button class="sec" id="apagarToken">Apagar deste navegador</button>
     </div>
-    <ol>
-      <li>No GitHub, abra Settings › Developer settings › Fine-grained tokens › Generate new token.</li>
-      <li>Em Repository access, escolha <i>Only select repositories</i> e marque <b>robo-blocksfit</b>.</li>
-      <li>Em Permissions, dê <b>Contents: Read and write</b>. Nada mais.</li>
-      <li>Gere, copie e cole aqui.</li>
-    </ol>
-    <p class="ajuda"><a href="https://github.com/rodrigoberaweb/robo-blocksfit/actions" target="_blank" rel="noopener">Ver o que o robô fez</a></p>
   </details>
 </main>
 
@@ -291,7 +284,7 @@ function desenharLista() {
     .filter(a => paraData(a.aula) > agora)
     .sort((a, b) => a.aula.localeCompare(b.aula));
   if (!estado.sha && !guardar.get("token")) {
-    l.innerHTML = '<li class="vazio">Cole a chave do GitHub no fim da página pra ver e agendar aulas.</li>'; return;
+    l.innerHTML = '<li class="vazio">Cole a chave do GitHub no topo da página pra ver e agendar aulas.</li>'; return;
   }
   if (!futuras.length) { l.innerHTML = '<li class="vazio">Nenhuma aula agendada. Escolha dia e horário acima.</li>'; return; }
   for (const a of futuras) {
@@ -384,7 +377,7 @@ async function agendar() {
     }, `Agenda: ${nome} ${aula} ${estado.treino}`);
     const d = paraData(aula);
     mensagem(repetida ? `${nome} já tem essa aula agendada.` : `Agendado: ${nome}, ${textoDia(d)} às ${textoHora(d)}, ${estado.treino.replace("Membros ", "").toLowerCase()}.`, repetida ? "erro" : "ok");
-  } catch (e) { mensagem(e.message === "sem-chave" ? "Cole a chave do GitHub no fim da página." : e.message, "erro"); }
+  } catch (e) { mensagem(e.message === "sem-chave" ? "Cole a chave do GitHub no topo da página." : e.message, "erro"); }
   b.disabled = false; b.textContent = "Agendar check-in";
   desenhar();
 }
@@ -411,15 +404,22 @@ $("salvarToken").onclick = async () => {
   const v = $("token").value.trim();
   if (!v) return mensagem("Cole a chave antes de salvar.", "erro");
   guardar.set("token", v); $("token").value = "";
-  try { await carregar(); mensagem("Chave salva. Agenda carregada."); $("config").open = false; }
+  try { await carregar(); mensagem("Chave salva. Agenda carregada."); }
   catch (e) { mensagem(e.message, "erro"); }
-  desenhar();
+  posicionarChave(); desenhar();
 };
-$("apagarToken").onclick = () => { guardar.set("token", null); estado.agenda = []; estado.sha = null; mensagem("Chave apagada deste navegador."); desenhar(); };
+$("apagarToken").onclick = () => { guardar.set("token", null); estado.agenda = []; estado.sha = null; mensagem("Chave apagada deste navegador."); posicionarChave(); desenhar(); };
+
+function posicionarChave() {
+  const c = $("config");
+  if (guardar.get("token")) { document.querySelector("main").append(c); c.open = false; }
+  else { $("msg").after(c); c.open = true; }
+}
 
 (async () => {
   desenhar();
-  if (!guardar.get("token")) { $("config").open = true; return; }
+  posicionarChave();
+  if (!guardar.get("token")) return;
   try { await carregar(); } catch (e) { mensagem(e.message, "erro"); }
   desenhar();
 })();
