@@ -52,6 +52,10 @@
   .anilha .disco::after {  /* furo central da anilha */
     content: ""; position: absolute; inset: 17px; border-radius: 50%; background: var(--giz);
   }
+  .anilha .disco.foto {
+    background: var(--foto) center / cover; box-shadow: 0 0 0 3px var(--cor);
+  }
+  .anilha .disco.foto::after { display: none; }
   .anilha b { display: block; font-stretch: 75%; font-size: 20px; font-weight: 700; line-height: 1.1; }
   .anilha small { color: var(--cinza); font-size: 13px; }
   .anilha[aria-pressed="true"] { border-color: var(--cor); background: #fff; }
@@ -231,7 +235,8 @@ function desenhar() {
   const p = $("pessoas"); p.innerHTML = "";
   for (const x of PESSOAS) {
     const qtd = estado.agenda.filter(a => (a.pessoa || "rodrigo") === x.id && !a.cancelado && paraData(a.aula) > agoraBR()).length;
-    const b = botao("anilha", `<span class="disco"></span><span><b>${x.nome}</b><small>${qtd ? qtd + (qtd > 1 ? " aulas marcadas" : " aula marcada") : "nenhuma aula"}</small></span>`,
+    const foto = fotos[x.id];
+    const b = botao("anilha", `<span class="disco${foto ? " foto" : ""}"${foto ? ` style="--foto:url('${foto}')"` : ""}></span><span><b>${x.nome}</b><small>${qtd ? qtd + (qtd > 1 ? " aulas marcadas" : " aula marcada") : "nenhuma aula"}</small></span>`,
       estado.pessoa === x.id, () => { estado.pessoa = x.id; guardar.set("pessoa", x.id); desenhar(); });
     b.style.setProperty("--cor", x.cor);
     p.append(b);
@@ -361,6 +366,26 @@ async function salvar(mudar, descricao) {
   }
 }
 
+/* ---------- fotos (ficam no repositório privado) ---------- */
+const fotos = {};
+for (const x of PESSOAS) { const f = guardar.get("foto-" + x.id); if (f) fotos[x.id] = f; }
+async function carregarFotos() {
+  const token = guardar.get("token");
+  if (!token) return;
+  for (const x of PESSOAS) {
+    if (fotos[x.id]) continue;
+    try {
+      const r = await fetch(`https://api.github.com/repos/${REPO}/contents/fotos/${x.id}.jpg`, {
+        headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json" } });
+      if (!r.ok) continue;
+      const j = await r.json();
+      fotos[x.id] = "data:image/jpeg;base64," + j.content.replace(/\n/g, "");
+      guardar.set("foto-" + x.id, fotos[x.id]);
+    } catch {}
+  }
+  desenhar();
+}
+
 /* ---------- ações ---------- */
 async function agendar() {
   const aula = aulaEscolhida();
@@ -404,11 +429,11 @@ $("salvarToken").onclick = async () => {
   const v = $("token").value.trim();
   if (!v) return mensagem("Cole a chave antes de salvar.", "erro");
   guardar.set("token", v); $("token").value = "";
-  try { await carregar(); mensagem("Chave salva. Agenda carregada."); }
+  try { await carregar(); mensagem("Chave salva. Agenda carregada."); carregarFotos(); }
   catch (e) { mensagem(e.message, "erro"); }
   posicionarChave(); desenhar();
 };
-$("apagarToken").onclick = () => { guardar.set("token", null); estado.agenda = []; estado.sha = null; mensagem("Chave apagada deste navegador."); posicionarChave(); desenhar(); };
+$("apagarToken").onclick = () => { guardar.set("token", null); for (const x of PESSOAS) { guardar.set("foto-" + x.id, null); delete fotos[x.id]; } estado.agenda = []; estado.sha = null; mensagem("Chave apagada deste navegador."); posicionarChave(); desenhar(); };
 
 function posicionarChave() {
   const c = $("config");
@@ -422,6 +447,7 @@ function posicionarChave() {
   desenhar();
   posicionarChave();
   if (!guardar.get("token")) return;
+  carregarFotos();
   try { await carregar(); } catch (e) { mensagem(e.message, "erro"); }
   desenhar();
 })();
