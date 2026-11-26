@@ -137,6 +137,7 @@
   <h1>Check-in da academia</h1>
   <p id="msg" class="msg" role="status"></p>
 
+  <div id="app">
   <section aria-labelledby="t-quem">
     <h2 id="t-quem">Quem vai treinar</h2>
     <div class="anilhas" id="pessoas"></div>
@@ -167,6 +168,7 @@
     <h2 id="t-agenda">Próximas aulas</h2>
     <ul class="lista" id="lista"><li class="vazio">Carregando…</li></ul>
   </section>
+  </div>
 
   <details id="config" style="margin-bottom:24px">
     <summary>Chave do GitHub</summary>
@@ -412,7 +414,9 @@ $("apagarToken").onclick = () => { guardar.set("token", null); estado.agenda = [
 
 function posicionarChave() {
   const c = $("config");
-  if (guardar.get("token")) { document.querySelector("main").append(c); c.open = false; }
+  const temChave = !!guardar.get("token");
+  $("app").hidden = !temChave;
+  if (temChave) { document.querySelector("main").append(c); c.open = false; }
   else { $("msg").after(c); c.open = true; }
 }
 
